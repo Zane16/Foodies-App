@@ -9,28 +9,28 @@ export default function Signup() {
   const [password, setPassword] = useState("");
 
   async function handleSignup() {
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (authError) {
-      Alert.alert("Signup Error", authError.message);
-      return;
-    }
-
-    if (authData.user) {
-      // ✅ Always assign Student role
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { role: "customer" } }, // correct place for metadata
+      });
+  
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("No user returned from signup.");
+  
+      // Insert into profiles table
       const { error: profileError } = await supabase.from("profiles").insert([
-        { id: authData.user.id, role: "Student" },
+        { id: authData.user.id, role: "customer" }
       ]);
-
-      if (profileError) {
-        Alert.alert("Profile Error", profileError.message);
-      } else {
-        Alert.alert("Success", "Account created successfully!");
-        router.push("/auth/login"); // ✅ back to login after signup
-      }
+  
+      if (profileError) throw profileError;
+  
+      Alert.alert("Success", "Account created successfully!");
+      router.push("/auth/login");
+  
+    } catch (error: any) {
+      Alert.alert("Signup Error", error.message);
     }
   }
 
@@ -69,43 +69,10 @@ export default function Signup() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  input: {
-    width: "100%",
-    height: 50,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    backgroundColor: "#f9f9f9",
-  },
-  button: {
-    backgroundColor: "#FF4B3E",
-    padding: 15,
-    borderRadius: 8,
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  link: {
-    color: "#007BFF",
-    marginTop: 10,
-  },
+  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, backgroundColor: "#fff" },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
+  input: { width: "100%", height: 50, borderColor: "#ccc", borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, marginBottom: 15, backgroundColor: "#f9f9f9" },
+  button: { backgroundColor: "#FF4B3E", padding: 15, borderRadius: 8, width: "100%", alignItems: "center", marginBottom: 10 },
+  buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  link: { color: "#007BFF", marginTop: 10 },
 });
