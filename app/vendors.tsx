@@ -4,16 +4,16 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native
 // Hardcoded vendors by org
 const vendorsByOrg: Record<string, any[]> = {
   "1": [
-    { id: "1", name: "McDonalds" },
-    { id: "2", name: "Jollibee" },
+    { id: "550e8400-e29b-41d4-a716-446655440001", name: "McDonalds" },
+    { id: "550e8400-e29b-41d4-a716-446655440002", name: "Jollibee" },
   ],
   "2": [
-    { id: "3", name: "Chowking" },
-    { id: "4", name: "Mang Inasal" },
+    { id: "550e8400-e29b-41d4-a716-446655440003", name: "Chowking" },
+    { id: "550e8400-e29b-41d4-a716-446655440004", name: "Mang Inasal" },
   ],
   "3": [
-    { id: "5", name: "Greenwich" },
-    { id: "6", name: "KFC" },
+    { id: "550e8400-e29b-41d4-a716-446655440005", name: "Greenwich" },
+    { id: "550e8400-e29b-41d4-a716-446655440006", name: "KFC" },
   ],
 };
 
