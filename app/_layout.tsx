@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
+import AuthGuard from "./components/AuthGuard";
 import { AuthProvider } from "./context/_authContext";
 import { CartProvider } from "./context/_CartContext";
-import AuthGuard from "./components/AuthGuard";
 
 export default function RootLayout() {
   return (
