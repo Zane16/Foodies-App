@@ -54,7 +54,7 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
             <Ionicons 
               name={focused ? "home" : "home-outline"} 
               size={24} 
@@ -67,7 +67,7 @@ export default function TabsLayout() {
         name="cart"
         options={{
           title: "Cart",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
             <Ionicons 
               name={focused ? "cart" : "cart-outline"} 
               size={24} 
@@ -80,7 +80,7 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: "Messages",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
             <Ionicons 
               name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} 
               size={24} 
@@ -93,7 +93,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
             <Ionicons 
               name={focused ? "person" : "person-outline"} 
               size={24} 
