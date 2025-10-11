@@ -82,7 +82,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       // ✅ FIXED: Use maybeSingle() instead of single() to avoid PGRST116 error
       const { data: vendorCheck, error: vendorError } = await supabase
         .from("vendors")
-        .select("id, name")
+        .select("id, business_name")
         .eq("id", vendorId)
         .maybeSingle()
 
@@ -100,9 +100,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         // Debug: Check if vendor exists at all
         const { data: allVendors } = await supabase
           .from("vendors")
-          .select("id, name")
+          .select("id, business_name")
           .limit(10)
-        
+
         console.log("📋 Available vendors in database:", allVendors)
         
         return {
@@ -111,7 +111,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      console.log("✅ Vendor validated:", vendorCheck.id, "-", vendorCheck.name)
+      console.log("✅ Vendor validated:", vendorCheck.id, "-", vendorCheck.business_name)
 
       // Validate user UUID format
       const uuidRegex =
@@ -132,7 +132,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             vendor_id: vendorId,
             items: cart,
             total_price: totalPrice,
-            status: "Pending",
+            status: "pending",
           },
         ])
         .select("*")

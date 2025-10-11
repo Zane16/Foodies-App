@@ -3,10 +3,8 @@ import { useLocalSearchParams, useRouter } from "expo-router"
 import React, { useEffect, useState } from "react"
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,14 +12,16 @@ import {
 } from "react-native"
 import { Colors } from "../constants/Colors"
 import { supabase } from "../supabase"
-
-const { width } = Dimensions.get("window")
+import { styles } from "../styles/screens/vendorsStyles"
 
 interface Vendor {
   id: string
-  full_name: string | null
-  vendor_name: string | null
-  status: string
+  business_name: string
+  business_address: string | null
+  profiles: {
+    full_name: string | null
+    status: string
+  }
 }
 
 export default function Vendors() {
@@ -38,11 +38,21 @@ export default function Vendors() {
     setLoading(true)
 
     const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, vendor_name, status, role")
-      .eq("role", "vendor")
-      .eq("status", "approved")
-      .eq("organization", orgName)
+      .from("vendors")
+      .select(`
+        id,
+        business_name,
+        business_address,
+        is_active,
+        profiles!inner (
+          full_name,
+          status,
+          organization
+        )
+      `)
+      .eq("profiles.status", "approved")
+      .eq("profiles.organization", orgName)
+      .eq("is_active", true)
 
     if (error) {
       console.error("Error fetching vendors:", error)
@@ -65,7 +75,7 @@ export default function Vendors() {
       setFilteredVendors(vendors)
     } else {
       const filtered = vendors.filter((vendor) => {
-        const name = (vendor.vendor_name || vendor.full_name || "").toLowerCase()
+        const name = (vendor.business_name || vendor.profiles.full_name || "").toLowerCase()
         return name.includes(searchQuery.toLowerCase())
       })
       setFilteredVendors(filtered)
@@ -77,7 +87,7 @@ export default function Vendors() {
       pathname: "vendor-menu",
       params: {
         vendorId: vendor.id,
-        vendorName: vendor.vendor_name || vendor.full_name,
+        vendorName: vendor.business_name,
         orgName,
       },
     } as any)
@@ -93,7 +103,7 @@ export default function Vendors() {
         <Ionicons name="restaurant" size={24} color={Colors.light.primary} />
       </View>
       <Text style={styles.circleName} numberOfLines={1}>
-        {(item.vendor_name || item.full_name || "Vendor").split(" ")[0]}
+        {(item.business_name || "Vendor").split(" ")[0]}
       </Text>
     </TouchableOpacity>
   )
@@ -189,202 +199,3 @@ export default function Vendors() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#4A5EE8",
-  },
-  blueHeader: {
-    backgroundColor: "#4A5EE8",
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    height: 45,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#000",
-  },
-  whiteContent: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -20,
-    paddingTop: 24,
-  },
-  orgBanner: {
-    alignItems: "center",
-    marginBottom: 24,
-    paddingHorizontal: 20,
-  },
-  orgImageContainer: {
-    marginBottom: 12,
-  },
-  orgImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#F5F7FF",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "#4A5EE8",
-  },
-  orgName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#000",
-    textAlign: "center",
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#000",
-    paddingHorizontal: 20,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: "#666",
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  vendorList: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  vendorCircle: {
-    alignItems: "center",
-    marginRight: 20,
-    width: 70,
-  },
-  circleIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#F5F7FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: "#E8EBFF",
-  },
-  circleName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#000",
-    textAlign: "center",
-  },
-  popularGrid: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  popularCard: {
-    width: (width - 52) / 3,
-    marginBottom: 16,
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    padding: 8,
-    alignItems: "center",
-  },
-  popularImagePlaceholder: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  popularTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#000",
-    textAlign: "center",
-    marginBottom: 2,
-  },
-  popularSubtitle: {
-    fontSize: 10,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  popularPrice: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#4A5EE8",
-  },
-  promoBanner: {
-    marginHorizontal: 20,
-    backgroundColor: "#E8F0FF",
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  promoContent: {
-    flex: 1,
-  },
-  promoTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#000",
-    marginBottom: 4,
-  },
-  promoSubtitle: {
-    fontSize: 14,
-    color: "#666",
-  },
-  promoImage: {
-    width: 60,
-    height: 60,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 12,
-  },
-  loadingContainer: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  emptyState: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#666",
-  },
-})
