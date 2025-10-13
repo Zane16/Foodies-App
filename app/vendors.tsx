@@ -14,6 +14,16 @@ import { Colors } from "../constants/Colors"
 import { supabase } from "../supabase"
 import { styles } from "../styles/screens/vendorsStyles"
 
+interface VendorFromDB {
+  id: string
+  business_name: string
+  business_address: string | null
+  profiles: {
+    full_name: string | null
+    status: string
+  }[]
+}
+
 interface Vendor {
   id: string
   business_name: string
@@ -21,7 +31,7 @@ interface Vendor {
   profiles: {
     full_name: string | null
     status: string
-  }
+  } | null
 }
 
 export default function Vendors() {
@@ -44,7 +54,7 @@ export default function Vendors() {
         business_name,
         business_address,
         is_active,
-        profiles!inner (
+        profiles!vendors_id_fkey (
           full_name,
           status,
           organization
@@ -59,8 +69,13 @@ export default function Vendors() {
       setVendors([])
       setFilteredVendors([])
     } else {
-      setVendors(data || [])
-      setFilteredVendors(data || [])
+      // Transform the data to flatten the profiles array
+      const transformedVendors: Vendor[] = (data as VendorFromDB[] || []).map(vendor => ({
+        ...vendor,
+        profiles: vendor.profiles && vendor.profiles.length > 0 ? vendor.profiles[0] : null
+      }))
+      setVendors(transformedVendors)
+      setFilteredVendors(transformedVendors)
     }
 
     setLoading(false)
@@ -75,7 +90,7 @@ export default function Vendors() {
       setFilteredVendors(vendors)
     } else {
       const filtered = vendors.filter((vendor) => {
-        const name = (vendor.business_name || vendor.profiles.full_name || "").toLowerCase()
+        const name = (vendor.business_name || vendor.profiles?.full_name || "").toLowerCase()
         return name.includes(searchQuery.toLowerCase())
       })
       setFilteredVendors(filtered)

@@ -9,14 +9,27 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Foodies needs your location to help deliverers find you.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Foodies needs your location to help deliverers find you.",
+        "NSPhotoLibraryUsageDescription": "Foodies needs access to your photos to set your profile picture.",
+        "NSCameraUsageDescription": "Foodies needs access to your camera to take a profile picture."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA"
+      ]
     },
     "web": {
       "bundler": "metro",

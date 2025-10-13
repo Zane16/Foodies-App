@@ -59,8 +59,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      console.log("🛒 Placing order with User ID:", userId)
-      
       const totalPrice = cart.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0
@@ -68,9 +66,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Ensure all items are from the same vendor
       const vendorId = cart[0].vendorId
-      console.log("📦 Cart vendor ID:", vendorId)
-      console.log("📦 Full cart:", JSON.stringify(cart, null, 2))
-      
       const allSameVendor = cart.every((i) => i.vendorId === vendorId)
       if (!allSameVendor) {
         return {
@@ -79,7 +74,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      // ✅ FIXED: Use maybeSingle() instead of single() to avoid PGRST116 error
+      // Validate vendor exists
       const { data: vendorCheck, error: vendorError } = await supabase
         .from("vendors")
         .select("id, business_name")
@@ -87,7 +82,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle()
 
       if (vendorError) {
-        console.error("❌ Vendor query error:", vendorError)
         return {
           success: false,
           message: "Error validating vendor: " + vendorError.message,
@@ -95,35 +89,49 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (!vendorCheck) {
-        console.error("❌ Vendor not found in vendors table:", vendorId)
-        
-        // Debug: Check if vendor exists at all
-        const { data: allVendors } = await supabase
-          .from("vendors")
-          .select("id, business_name")
-          .limit(10)
-
-        console.log("📋 Available vendors in database:", allVendors)
-        
         return {
           success: false,
-          message: `Vendor not found (ID: ${vendorId}). Please contact support.`,
+          message: "Vendor not found. Please contact support.",
         }
       }
-
-      console.log("✅ Vendor validated:", vendorCheck.id, "-", vendorCheck.business_name)
 
       // Validate user UUID format
       const uuidRegex =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      
+
       if (!uuidRegex.test(userId)) {
-        console.error("❌ Invalid UUID format:", userId)
         return { success: false, message: "Invalid user ID format" }
       }
 
-      console.log("💾 Inserting order into database...")
-      
+      // Fetch user profile data for delivery information
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name, phone, delivery_address, delivery_notes")
+        .eq("id", userId)
+        .maybeSingle()
+
+      if (profileError) {
+        return {
+          success: false,
+          message: "Error fetching profile: " + profileError.message,
+        }
+      }
+
+      if (!profile) {
+        return {
+          success: false,
+          message: "Profile not found. Please complete your profile first.",
+        }
+      }
+
+      // Validate required profile fields
+      if (!profile.full_name || !profile.phone || !profile.delivery_address) {
+        return {
+          success: false,
+          message: "Please complete your profile (name, phone, and delivery address) before placing an order.",
+        }
+      }
+
       const { data, error } = await supabase
         .from("orders")
         .insert([
@@ -133,21 +141,23 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             items: cart,
             total_price: totalPrice,
             status: "pending",
+            customer_name: profile.full_name,
+            customer_phone: profile.phone,
+            delivery_address: profile.delivery_address,
+            delivery_notes: profile.delivery_notes || null,
           },
         ])
         .select("*")
 
       if (error) {
-        console.error("❌ Order Insert Error:", error)
         return { success: false, message: error.message }
       }
 
-      console.log("✅ Order placed successfully:", data)
       clearCart()
       return { success: true, message: "Order placed successfully!" }
-      
+
     } catch (err: any) {
-      console.error("❌ Unexpected Error placing order:", err)
+      console.error("Error placing order:", err)
       return { success: false, message: err.message || "Unknown error occurred" }
     }
   }

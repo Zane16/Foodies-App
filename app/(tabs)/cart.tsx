@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
@@ -10,21 +11,69 @@ import {
   TouchableOpacity,
   View
 } from "react-native"
+import { useRouter, useFocusEffect } from "expo-router"
 import { Colors } from "../../constants/Colors"
 import { useAuth } from "../context/_authContext"
 import { useCart } from "../context/_CartContext"
+import { supabase } from "../../supabase"
 import { styles } from "../../styles/screens/cartStyles"
+import { useCallback } from "react"
+
+interface ProfileData {
+  full_name: string | null
+  phone: string | null
+  delivery_address: string | null
+  delivery_notes: string | null
+}
 
 export default function Cart() {
   const { cart, incrementQuantity, removeFromCart, clearCart, placeOrder } = useCart()
   const { user, loading } = useAuth()
+  const router = useRouter()
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
   const [deliveryMethod, setDeliveryMethod] = useState<"Deliver" | "Pick Up">("Deliver")
-  const [deliveryAddress, setDeliveryAddress] = useState("")
+  const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [loadingProfile, setLoadingProfile] = useState(false)
 
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const deliveryFee = deliveryMethod === "Deliver" ? 29 : 0
   const finalTotal = totalPrice + deliveryFee
+
+  const fetchProfile = useCallback(async () => {
+    if (!user?.id) return
+
+    setLoadingProfile(true)
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, phone, delivery_address, delivery_notes")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      if (error) throw error
+      setProfile(data)
+    } catch (error) {
+      console.error("Error fetching profile:", error)
+    } finally {
+      setLoadingProfile(false)
+    }
+  }, [user?.id])
+
+  // Fetch profile on mount and when user changes
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile()
+    }
+  }, [user?.id, fetchProfile])
+
+  // Refetch profile when screen comes into focus (e.g., returning from profile page)
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        fetchProfile()
+      }
+    }, [user?.id, fetchProfile])
+  )
 
   const handleCheckout = async () => {
     if (!user) {
@@ -33,16 +82,16 @@ export default function Cart() {
     }
 
     if (!user.id) {
-      Alert.alert("❌ Error", "User ID not found. Please log out and log back in.")
+      Alert.alert("Error", "User ID not found. Please log out and log back in.")
       return
     }
 
     const result = await placeOrder(user.id)
     if (result.success) {
       setShowCheckoutModal(false)
-      Alert.alert("✅ Success", result.message)
+      Alert.alert("Success", result.message)
     } else {
-      Alert.alert("❌ Error", result.message)
+      Alert.alert("Error", result.message)
     }
   }
 
@@ -51,6 +100,28 @@ export default function Cart() {
       Alert.alert("Cart is empty", "Add items to your cart first")
       return
     }
+
+    // Check if profile is complete
+    if (!profile?.full_name || !profile?.phone || !profile?.delivery_address) {
+      const missingFields = []
+      if (!profile?.full_name) missingFields.push("name")
+      if (!profile?.phone) missingFields.push("phone")
+      if (!profile?.delivery_address) missingFields.push("delivery address")
+
+      Alert.alert(
+        "Complete Your Profile",
+        `Please complete your profile (${missingFields.join(", ")}) before placing an order.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Go to Profile",
+            onPress: () => router.push("/(tabs)/profile"),
+          },
+        ]
+      )
+      return
+    }
+
     setShowCheckoutModal(true)
   }
 
@@ -113,13 +184,26 @@ export default function Cart() {
       {/* Delivery Location */}
       <View style={styles.deliveryLocationCard}>
         <Text style={styles.deliveryLabel}>Delivery Location</Text>
-        <TouchableOpacity style={styles.locationRow}>
-          <Ionicons name="location" size={20} color={Colors.light.primary} />
-          <Text style={styles.locationText}>Home</Text>
-          <TouchableOpacity style={styles.changeButton}>
-            <Text style={styles.changeButtonText}>Change Location</Text>
+        {loadingProfile ? (
+          <ActivityIndicator size="small" color={Colors.light.primary} />
+        ) : profile?.delivery_address ? (
+          <TouchableOpacity style={styles.locationRow} onPress={() => router.push("/(tabs)/profile")}>
+            <Ionicons name="location" size={20} color={Colors.light.primary} />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {profile.delivery_address.split(",")[0] || "Home"}
+            </Text>
+            <TouchableOpacity style={styles.changeButton} onPress={() => router.push("/(tabs)/profile")}>
+              <Text style={styles.changeButtonText}>Change</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.locationRow} onPress={() => router.push("/(tabs)/profile")}>
+            <Ionicons name="location-outline" size={20} color="#EF4444" />
+            <Text style={[styles.locationText, { color: "#EF4444" }]}>
+              Add delivery address
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Cart Items */}
@@ -241,9 +325,21 @@ export default function Cart() {
               <View style={styles.addressSection}>
                 <Text style={styles.sectionLabel}>Delivery Address</Text>
                 <View style={styles.addressCard}>
-                  <Text style={styles.addressTitle}>Jacob St.</Text>
-                  <Text style={styles.addressDetail}>Bonganbongan Bar Naga City</Text>
-                  <TouchableOpacity style={styles.editAddressButton}>
+                  <Text style={styles.addressTitle}>{profile?.full_name || "Customer"}</Text>
+                  <Text style={styles.addressDetail}>{profile?.delivery_address || "No address set"}</Text>
+                  {profile?.delivery_notes && (
+                    <Text style={styles.addressDetail}>Note: {profile.delivery_notes}</Text>
+                  )}
+                  {profile?.phone && (
+                    <Text style={styles.addressDetail}>Phone: {profile.phone}</Text>
+                  )}
+                  <TouchableOpacity
+                    style={styles.editAddressButton}
+                    onPress={() => {
+                      setShowCheckoutModal(false)
+                      router.push("/(tabs)/profile")
+                    }}
+                  >
                     <Text style={styles.editAddressText}>Edit Address</Text>
                     <Ionicons name="chevron-forward" size={16} color={Colors.light.icon} />
                   </TouchableOpacity>
