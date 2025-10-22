@@ -68,17 +68,20 @@ export default function OrganizationSelection() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#4A5EE8" />
+      <StatusBar barStyle="light-content" backgroundColor="#4A5EE8" />
 
       {/* Blue Header */}
       <View style={styles.blueHeader}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Foodies</Text>
+          <View>
+            <Text style={styles.headerTitle}>Home</Text>
+            <Text style={styles.headerSubtitle}>Find your favorite food</Text>
+          </View>
           <TouchableOpacity style={styles.notificationButton}>
             <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
           <TextInput

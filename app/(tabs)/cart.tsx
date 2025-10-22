@@ -148,22 +148,30 @@ export default function Cart() {
   if (cart.length === 0) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" />
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Cart</Text>
-          <TouchableOpacity style={styles.moreButton}>
-            <Ionicons name="ellipsis-horizontal" size={24} color={Colors.light.text} />
-          </TouchableOpacity>
+        <StatusBar barStyle="light-content" />
+
+        {/* Blue Header */}
+        <View style={styles.blueHeader}>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.headerTitle}>Cart</Text>
+              <Text style={styles.headerSubtitle}>Review your order</Text>
+            </View>
+            <TouchableOpacity style={styles.notificationButton}>
+              <Ionicons name="ellipsis-horizontal" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.centerContainer}>
-          <View style={styles.emptyIconContainer}>
-            <Ionicons name="cart-outline" size={64} color={Colors.light.icon} />
+        {/* White Content Area */}
+        <View style={styles.whiteContent}>
+          <View style={styles.centerContainer}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="cart-outline" size={64} color={Colors.light.icon} />
+            </View>
+            <Text style={styles.emptyTitle}>Your cart is empty</Text>
+            <Text style={styles.emptySubtitle}>Add items to get started</Text>
           </View>
-          <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptySubtitle}>Add items to get started</Text>
         </View>
       </View>
     )
@@ -171,48 +179,30 @@ export default function Cart() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Cart</Text>
-        <TouchableOpacity style={styles.moreButton}>
-          <Ionicons name="ellipsis-horizontal" size={24} color={Colors.light.text} />
-        </TouchableOpacity>
+      <StatusBar barStyle="light-content" />
+
+      {/* Blue Header */}
+      <View style={styles.blueHeader}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.headerTitle}>Cart</Text>
+            <Text style={styles.headerSubtitle}>Review your order</Text>
+          </View>
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="ellipsis-horizontal" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Delivery Location */}
-      <View style={styles.deliveryLocationCard}>
-        <Text style={styles.deliveryLabel}>Delivery Location</Text>
-        {loadingProfile ? (
-          <ActivityIndicator size="small" color={Colors.light.primary} />
-        ) : profile?.delivery_address ? (
-          <TouchableOpacity style={styles.locationRow} onPress={() => router.push("/(tabs)/profile")}>
-            <Ionicons name="location" size={20} color={Colors.light.primary} />
-            <Text style={styles.locationText} numberOfLines={1}>
-              {profile.delivery_address.split(",")[0] || "Home"}
-            </Text>
-            <TouchableOpacity style={styles.changeButton} onPress={() => router.push("/(tabs)/profile")}>
-              <Text style={styles.changeButtonText}>Change</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.locationRow} onPress={() => router.push("/(tabs)/profile")}>
-            <Ionicons name="location-outline" size={20} color="#EF4444" />
-            <Text style={[styles.locationText, { color: "#EF4444" }]}>
-              Add delivery address
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Cart Items */}
-      <FlatList
-        data={cart}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        contentContainerStyle={styles.cartList}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
+      {/* White Content Area */}
+      <View style={styles.whiteContent}>
+        {/* Cart Items */}
+        <FlatList
+          data={cart}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
+          contentContainerStyle={styles.cartList}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
           <View style={styles.cartItem}>
             <View style={styles.itemCheckbox}>
               <View style={styles.checkbox} />
@@ -251,9 +241,10 @@ export default function Cart() {
             >
               <Ionicons name="trash-outline" size={20} color="#EF4444" />
             </TouchableOpacity>
-          </View>
-        )}
-      />
+            </View>
+          )}
+        />
+      </View>
 
       {/* Bottom Bar with Done Button */}
       <View style={styles.bottomBar}>

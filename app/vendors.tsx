@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react"
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   StatusBar,
   Text,
   TextInput,
@@ -14,24 +15,25 @@ import { Colors } from "../constants/Colors"
 import { supabase } from "../supabase"
 import { styles } from "../styles/screens/vendorsStyles"
 
+interface VendorProfile {
+  full_name: string | null
+  status: string
+  organization: string
+  profile_picture_url: string | null
+}
+
 interface VendorFromDB {
   id: string
   business_name: string
   business_address: string | null
-  profiles: {
-    full_name: string | null
-    status: string
-  }[]
+  profiles: VendorProfile
 }
 
 interface Vendor {
   id: string
   business_name: string
   business_address: string | null
-  profiles: {
-    full_name: string | null
-    status: string
-  } | null
+  profiles: VendorProfile | null
 }
 
 export default function Vendors() {
@@ -47,6 +49,8 @@ export default function Vendors() {
 
     setLoading(true)
 
+    console.log("🔍 Fetching vendors for organization:", orgName)
+
     const { data, error } = await supabase
       .from("vendors")
       .select(`
@@ -57,25 +61,49 @@ export default function Vendors() {
         profiles!vendors_id_fkey (
           full_name,
           status,
-          organization
+          organization,
+          profile_picture_url
         )
       `)
       .eq("profiles.status", "approved")
       .eq("profiles.organization", orgName)
       .eq("is_active", true)
 
+    console.log("📊 Query result for", orgName, ":", {
+      count: data?.length || 0,
+      vendors: data?.map(v => ({
+        name: v.business_name,
+        org: (v as any).profiles?.organization
+      }))
+    })
+
     if (error) {
       console.error("Error fetching vendors:", error)
       setVendors([])
       setFilteredVendors([])
     } else {
-      // Transform the data to flatten the profiles array
-      const transformedVendors: Vendor[] = (data as VendorFromDB[] || []).map(vendor => ({
+      // Transform the data - profiles comes back as an object (not array) from the join
+      const transformedVendors: Vendor[] = (data as any[] || []).map(vendor => ({
         ...vendor,
-        profiles: vendor.profiles && vendor.profiles.length > 0 ? vendor.profiles[0] : null
+        profiles: vendor.profiles || null
       }))
-      setVendors(transformedVendors)
-      setFilteredVendors(transformedVendors)
+
+      // IMPORTANT: Filter by organization in JavaScript since Supabase join filtering doesn't work reliably
+      const orgFilteredVendors = transformedVendors.filter(vendor => {
+        const vendorOrg = vendor.profiles?.organization
+        const matches = vendorOrg === orgName
+
+        if (!matches) {
+          console.log(`⚠️ Filtered out ${vendor.business_name} - org mismatch (vendor: "${vendorOrg}", expected: "${orgName}")`)
+        }
+
+        return matches
+      })
+
+      console.log(`✅ After filtering: ${orgFilteredVendors.length} vendors for ${orgName}`)
+
+      setVendors(orgFilteredVendors)
+      setFilteredVendors(orgFilteredVendors)
     }
 
     setLoading(false)
@@ -115,7 +143,14 @@ export default function Vendors() {
       activeOpacity={0.7}
     >
       <View style={styles.circleIcon}>
-        <Ionicons name="restaurant" size={24} color={Colors.light.primary} />
+        {item.profiles?.profile_picture_url ? (
+          <Image
+            source={{ uri: item.profiles.profile_picture_url }}
+            style={styles.circleImage}
+          />
+        ) : (
+          <Ionicons name="restaurant" size={24} color={Colors.light.primary} />
+        )}
       </View>
       <Text style={styles.circleName} numberOfLines={1}>
         {(item.business_name || "Vendor").split(" ")[0]}

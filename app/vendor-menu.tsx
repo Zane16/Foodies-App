@@ -47,9 +47,13 @@ export default function Foods() {
   const [selectedFood, setSelectedFood] = useState<MenuItem | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  
+
   // ✅ NEW: Store the resolved vendor ID
   const [resolvedVendorId, setResolvedVendorId] = useState<string | null>(null)
+  // Store vendor header image
+  const [headerImageUrl, setHeaderImageUrl] = useState<string | null>(null)
+  // Store vendor profile picture
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!vendorId && !vendorName) {
@@ -68,24 +72,40 @@ export default function Foods() {
       if (passedVendorId) {
         const { data: vendorData, error: vendorError } = await supabase
           .from("vendors")
-          .select("id")
+          .select(`
+            id,
+            header_image_url,
+            profiles!vendors_id_fkey (
+              profile_picture_url
+            )
+          `)
           .eq("id", passedVendorId)
           .single()
-        
+
         if (!vendorError && vendorData) {
           vendorUUID = vendorData.id
+          setHeaderImageUrl(vendorData.header_image_url)
+          setProfilePictureUrl((vendorData as any).profiles?.profile_picture_url || null)
         }
       }
-      
+
       if (!vendorUUID && passedVendorName) {
         const { data: nameData, error: nameError } = await supabase
           .from("vendors")
-          .select("id")
+          .select(`
+            id,
+            header_image_url,
+            profiles!vendors_id_fkey (
+              profile_picture_url
+            )
+          `)
           .eq("business_name", passedVendorName)
           .single()
 
         if (!nameError && nameData) {
           vendorUUID = nameData.id
+          setHeaderImageUrl(nameData.header_image_url)
+          setProfilePictureUrl((nameData as any).profiles?.profile_picture_url || null)
         }
       }
       
@@ -179,35 +199,95 @@ export default function Foods() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detail</Text>
-        <TouchableOpacity style={styles.shareButton}>
-          <Ionicons name="share-outline" size={24} color={Colors.light.text} />
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Vendor Info Card */}
-        <View style={styles.vendorCard}>
-          <View style={styles.vendorIcon}>
-            <Ionicons name="restaurant" size={32} color={Colors.light.primary} />
+      {/* Vendor Header Section with Image Background */}
+      {headerImageUrl ? (
+        <View style={styles.vendorHeaderContainer}>
+          {/* Header Image Background */}
+          <Image
+            source={{ uri: headerImageUrl }}
+            style={styles.vendorHeaderImage}
+            resizeMode="cover"
+          />
+
+          {/* Header Bar Overlay */}
+          <View style={styles.headerOverlay}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButtonWhite}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitleWhite}>Detail</Text>
+            <TouchableOpacity style={styles.shareButtonWhite}>
+              <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-          <View style={styles.vendorInfo}>
-            <Text style={styles.vendorName}>{vendorName || "Vendor"}</Text>
-            <Text style={styles.vendorLocation}>1st Floor Canteen</Text>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={16} color="#FFA500" />
-              <Text style={styles.ratingText}>4.8</Text>
-              <Text style={styles.reviewCount}>(830)</Text>
+
+          {/* White Card Overlay with Vendor Info */}
+          <View style={styles.vendorInfoCard}>
+            <View style={styles.vendorLogo}>
+              {profilePictureUrl ? (
+                <Image
+                  source={{ uri: profilePictureUrl }}
+                  style={styles.vendorLogoImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Ionicons name="restaurant" size={32} color="#FFFFFF" />
+              )}
+            </View>
+            <View style={styles.vendorDetails}>
+              <Text style={styles.vendorName}>{vendorName || "Vendor"}</Text>
+              <Text style={styles.vendorLocation}>1st Floor Canteen</Text>
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={16} color="#FFA500" />
+                <Text style={styles.ratingText}>4.8</Text>
+                <Text style={styles.reviewCount}>(830)</Text>
+              </View>
             </View>
           </View>
         </View>
+      ) : (
+        <>
+          {/* Regular Header (no image) */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Detail</Text>
+            <TouchableOpacity style={styles.shareButton}>
+              <Ionicons name="share-outline" size={24} color={Colors.light.text} />
+            </TouchableOpacity>
+          </View>
 
+          {/* Vendor Card (no image) */}
+          <View style={styles.vendorCard}>
+            <View style={styles.vendorCardContent}>
+              <View style={styles.vendorIcon}>
+                {profilePictureUrl ? (
+                  <Image
+                    source={{ uri: profilePictureUrl }}
+                    style={styles.vendorIconImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Ionicons name="restaurant" size={32} color={Colors.light.primary} />
+                )}
+              </View>
+              <View style={styles.vendorInfo}>
+                <Text style={styles.vendorName}>{vendorName || "Vendor"}</Text>
+                <Text style={styles.vendorLocation}>1st Floor Canteen</Text>
+                <View style={styles.ratingRow}>
+                  <Ionicons name="star" size={16} color="#FFA500" />
+                  <Text style={styles.ratingText}>4.8</Text>
+                  <Text style={styles.reviewCount}>(830)</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </>
+      )}
+
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>

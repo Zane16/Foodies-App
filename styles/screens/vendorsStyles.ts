@@ -108,6 +108,12 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 2,
     borderColor: "#E8EBFF",
+    overflow: "hidden",
+  },
+  circleImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 35,
   },
   circleName: {
     fontSize: 12,

@@ -20,9 +20,15 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "700",
     color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    opacity: 0.9,
   },
   notificationButton: {
     width: 40,

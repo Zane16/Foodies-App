@@ -54,11 +54,12 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "Home",
+          headerShown: false,
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons 
-              name={focused ? "home" : "home-outline"} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -67,11 +68,12 @@ export default function TabsLayout() {
         name="cart"
         options={{
           title: "Cart",
+          headerShown: false,
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons 
-              name={focused ? "cart" : "cart-outline"} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? "cart" : "cart-outline"}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -80,11 +82,12 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: "Messages",
+          headerShown: false,
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons 
-              name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -93,11 +96,12 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Profile",
+          headerShown: false,
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons 
-              name={focused ? "person" : "person-outline"} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? "person" : "person-outline"}
+              size={24}
+              color={color}
             />
           ),
         }}

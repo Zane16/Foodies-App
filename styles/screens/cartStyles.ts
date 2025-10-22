@@ -4,35 +4,50 @@ import { Colors } from "../../constants/Colors"
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: "#4A5EE8",
+  },
+  blueHeader: {
+    backgroundColor: "#4A5EE8",
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+  },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    opacity: 0.9,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  whiteContent: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 48,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: Colors.light.background,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: Colors.light.text,
-  },
-  moreButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Colors.light.surface,
-    alignItems: "center",
-    justifyContent: "center",
   },
   deliveryLocationCard: {
     marginHorizontal: 24,
@@ -69,7 +84,7 @@ export const styles = StyleSheet.create({
     color: "#EF4444",
   },
   cartList: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingBottom: 120,
   },
   cartItem: {
@@ -162,7 +177,7 @@ export const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   doneButton: {
-    backgroundColor: "#6B4EE6",
+    backgroundColor: "#4A5EE8",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -238,7 +253,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   toggleButtonActive: {
-    backgroundColor: "#E879F9",
+    backgroundColor: "#4A5EE8",
   },
   toggleText: {
     fontSize: 16,
@@ -366,7 +381,7 @@ export const styles = StyleSheet.create({
   },
   confirmButton: {
     marginHorizontal: 24,
-    backgroundColor: "#6B4EE6",
+    backgroundColor: "#4A5EE8",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
