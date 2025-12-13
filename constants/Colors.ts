@@ -3,11 +3,30 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-const tintColorLight = '#7c3aed';
-const tintColorDark = '#a78bfa';
-const indigoAccent = "#4F46E5" // Modern indigo
-const indigoLight = "#6366F1" // Lighter indigo for interactions
-const indigoDark = "#3730A3" // Darker indigo for depth
+// New Color Scheme
+const purplePrimary = "#4A5EE8" // Main accent (CTAs, active states, vendor primary)
+const purpleLight = "#7C7FE5" // Light purple variation
+const purpleDark = "#4A4DB8" // Dark purple variation
+const tealSecondary = "#14B8A6" // Secondary accent (navigation, deliverer actions)
+
+// Dark Neutrals
+const darkNavy = "#1E293B" // Headers
+const darkCharcoal = "#2D3748"
+const darkSlate = "#1A202C" // Text
+
+// Grays
+const backgroundGray = "#F7F7F7"
+const surfaceWhite = "#FFFFFF"
+const textPrimary = "#1A202C"
+const textSecondary = "#6B7280"
+const textTertiary = "#9CA3AF"
+const borderGray = "#E5E7EB"
+
+// Status Colors
+const successGreen = "#10B981"
+const warningOrange = "#F59E0B"
+const errorRed = "#EF4444"
+const infoBlue = "#3B82F6"
 
 export const BorderRadius = {
   none: 0,
@@ -65,6 +84,7 @@ type ColorTheme = {
   primaryText?: string;
   primaryLight?: string;
   primaryDark?: string;
+  secondary?: string;
   input: string;
   inputBorder?: string;
   placeholder?: string;
@@ -84,43 +104,54 @@ type ColorsType = {
 
 export const Colors: ColorsType = {
   light: {
-    text: "#0F172A", // Rich black for text
-    background: "#FFFFFF", // Pure white background
-    surface: "#F8FAFC", // Subtle off-white for cards
-    tint: indigoAccent,
-    icon: "#64748B", // Neutral gray for icons
-    tabIconDefault: "#94A3B8",
-    tabIconSelected: indigoAccent,
-    border: "#E2E8F0", // Light border
-    input: "#F1F5F9", // Input background
-    placeholder: "#94A3B8", // Placeholder text
-    success: "#10B981",
-    warning: "#F59E0B",
-    error: "#EF4444",
-    primary: indigoAccent,
-    primaryLight: indigoLight,
-    primaryDark: indigoDark,
-    shadow: "rgba(15, 23, 42, 0.1)",
+    text: textPrimary,
+    background: backgroundGray,
+    surface: surfaceWhite,
+    tint: purplePrimary,
+    icon: textSecondary,
+    tabIconDefault: textTertiary,
+    tabIconSelected: purplePrimary,
+    border: borderGray,
+    input: surfaceWhite,
+    inputBorder: borderGray,
+    placeholder: textTertiary,
+    success: successGreen,
+    warning: warningOrange,
+    error: errorRed,
+    primary: purplePrimary,
+    primaryLight: purpleLight,
+    primaryDark: purpleDark,
+    primaryText: surfaceWhite,
+    secondary: tealSecondary,
+    card: surfaceWhite,
+    mutedText: textSecondary,
+    cardBorder: borderGray,
+    shadow: "rgba(26, 32, 44, 0.1)",
   },
   dark: {
-    text: "#F8FAFC",
-    background: "#0F172A",
-    surface: "#1E293B",
-    tint: indigoLight,
-    icon: "#94A3B8",
-    tabIconDefault: "#64748B",
-    tabIconSelected: indigoLight,
-    border: "#334155",
-    input: "#1E293B",
-    placeholder: "#64748B",
-    success: "#10B981",
-    warning: "#F59E0B",
-    error: "#EF4444",
-    primary: indigoLight,
-    primaryLight: "#818CF8",
-    primaryDark: indigoAccent,
+    text: surfaceWhite,
+    background: darkSlate,
+    surface: darkNavy,
+    tint: purpleLight,
+    icon: textTertiary,
+    tabIconDefault: textSecondary,
+    tabIconSelected: purpleLight,
+    border: darkCharcoal,
+    input: darkNavy,
+    inputBorder: darkCharcoal,
+    placeholder: textSecondary,
+    success: successGreen,
+    warning: warningOrange,
+    error: errorRed,
+    primary: purpleLight,
+    primaryLight: purpleLight,
+    primaryDark: purpleDark,
+    primaryText: surfaceWhite,
+    secondary: tealSecondary,
+    card: darkNavy,
+    mutedText: textSecondary,
+    cardBorder: darkCharcoal,
     shadow: "rgba(0, 0, 0, 0.3)",
-   
   },
-  
+
 };

@@ -4,36 +4,17 @@ import { Ionicons } from "@expo/vector-icons"
 import { Tabs } from "expo-router"
 import { Platform } from "react-native"
 import { Colors } from "../../constants/Colors"
+import CustomTabBar from "../components/CustomTabBar"
 
 
 
 export default function TabsLayout() {
   return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.primary,
+        tabBarActiveTintColor: Colors.light.secondary,
         tabBarInactiveTintColor: Colors.light.icon,
-        tabBarStyle: {
-          backgroundColor: Colors.light.background,
-          borderTopColor: Colors.light.border,
-          borderTopWidth: 1,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === "ios" ? 24 : 8,
-          height: Platform.OS === "ios" ? 88 : 64,
-          elevation: 8,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "600",
-          marginTop: 4,
-        },
-        tabBarIconStyle: {
-          marginTop: 4,
-        },
         headerStyle: {
           backgroundColor: Colors.light.background,
           borderBottomColor: Colors.light.border,
@@ -55,13 +36,6 @@ export default function TabsLayout() {
         options={{
           title: "Home",
           headerShown: false,
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
-              size={24}
-              color={color}
-            />
-          ),
         }}
       />
       <Tabs.Screen
@@ -69,13 +43,6 @@ export default function TabsLayout() {
         options={{
           title: "Cart",
           headerShown: false,
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons
-              name={focused ? "cart" : "cart-outline"}
-              size={24}
-              color={color}
-            />
-          ),
         }}
       />
       <Tabs.Screen
@@ -83,13 +50,6 @@ export default function TabsLayout() {
         options={{
           title: "Messages",
           headerShown: false,
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons
-              name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
-              size={24}
-              color={color}
-            />
-          ),
         }}
       />
       <Tabs.Screen
@@ -97,13 +57,6 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           headerShown: false,
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Ionicons
-              name={focused ? "person" : "person-outline"}
-              size={24}
-              color={color}
-            />
-          ),
         }}
       />
     </Tabs>

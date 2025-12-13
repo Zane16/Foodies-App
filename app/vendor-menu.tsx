@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons"
 import { useLocalSearchParams, useRouter } from "expo-router"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import {
   ActivityIndicator,
+  Animated,
   Image,
   Modal,
   ScrollView,
@@ -16,6 +17,8 @@ import { Colors } from "../constants/Colors"
 import { supabase } from "../supabase"
 import { useCart } from "./context/_CartContext"
 import { styles } from "../styles/screens/vendorMenuStyles"
+import VendorReviewsModal from "./components/VendorReviewsModal"
+import SimpleFeaturedItems from "./components/SimpleFeaturedItems"
 
 interface MenuItem {
   id: string
@@ -30,6 +33,72 @@ interface Category {
   id: string
   name: string
   vendor_id: string
+}
+
+// Animated Menu Item Component
+const AnimatedMenuItem = ({ item, index, onPress }: { item: MenuItem; index: number; onPress: () => void }) => {
+  const scaleAnim = useRef(new Animated.Value(0.9)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        delay: index * 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        delay: index * 50,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [])
+
+  return (
+    <Animated.View
+      style={{
+        width: '47%',
+        margin: '1.5%',
+        opacity: fadeAnim,
+        transform: [{ scale: scaleAnim }],
+      }}
+    >
+      <TouchableOpacity
+        style={[styles.menuCard, { width: '100%', margin: 0 }]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <View style={styles.menuImageContainer}>
+          {item.image_url ? (
+            <Image source={{ uri: item.image_url }} style={styles.menuImage} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Ionicons name="fast-food" size={40} color={Colors.light.primary} />
+            </View>
+          )}
+        </View>
+        <Text style={styles.menuName} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text style={styles.menuDescription} numberOfLines={1}>
+          {item.description || "Delicious food"}
+        </Text>
+        <View style={styles.menuFooter}>
+          <Text style={styles.menuPrice}>₱{item.price.toFixed(2)}</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={onPress}
+          >
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  )
 }
 
 export default function Foods() {
@@ -47,6 +116,9 @@ export default function Foods() {
   const [selectedFood, setSelectedFood] = useState<MenuItem | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  // Ref for scrolling to menu grid
+  const menuGridRef = useRef<View>(null)
+  const scrollViewRef = useRef<ScrollView>(null)
 
   // ✅ NEW: Store the resolved vendor ID
   const [resolvedVendorId, setResolvedVendorId] = useState<string | null>(null)
@@ -54,6 +126,14 @@ export default function Foods() {
   const [headerImageUrl, setHeaderImageUrl] = useState<string | null>(null)
   // Store vendor profile picture
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null)
+  // Store vendor ratings
+  const [averageRating, setAverageRating] = useState<number>(0)
+  const [totalRatings, setTotalRatings] = useState<number>(0)
+  // Reviews modal state
+  const [showReviewsModal, setShowReviewsModal] = useState(false)
+  // Store vendor delivery fee and minimum order
+  const [deliveryFee, setDeliveryFee] = useState<number>(0)
+  const [minimumOrder, setMinimumOrder] = useState<number>(0)
 
   useEffect(() => {
     if (!vendorId && !vendorName) {
@@ -75,6 +155,8 @@ export default function Foods() {
           .select(`
             id,
             header_image_url,
+            delivery_fee,
+            minimum_order,
             profiles!vendors_id_fkey (
               profile_picture_url
             )
@@ -86,6 +168,8 @@ export default function Foods() {
           vendorUUID = vendorData.id
           setHeaderImageUrl(vendorData.header_image_url)
           setProfilePictureUrl((vendorData as any).profiles?.profile_picture_url || null)
+          setDeliveryFee(Number(vendorData.delivery_fee) || 0)
+          setMinimumOrder(Number(vendorData.minimum_order) || 0)
         }
       }
 
@@ -95,6 +179,8 @@ export default function Foods() {
           .select(`
             id,
             header_image_url,
+            delivery_fee,
+            minimum_order,
             profiles!vendors_id_fkey (
               profile_picture_url
             )
@@ -106,6 +192,8 @@ export default function Foods() {
           vendorUUID = nameData.id
           setHeaderImageUrl(nameData.header_image_url)
           setProfilePictureUrl((nameData as any).profiles?.profile_picture_url || null)
+          setDeliveryFee(Number(nameData.delivery_fee) || 0)
+          setMinimumOrder(Number(nameData.minimum_order) || 0)
         }
       }
       
@@ -121,6 +209,27 @@ export default function Foods() {
       console.log("✅ Resolved Vendor ID:", vendorUUID)
       setResolvedVendorId(vendorUUID)
 
+      // Fetch vendor ratings
+      try {
+        const { data: ratingData, error: ratingError } = await supabase
+          .rpc('get_average_rating', {
+            entity_id: vendorUUID,
+            rating_type: 'vendor'
+          })
+
+        if (!ratingError && ratingData && ratingData.length > 0) {
+          setAverageRating(ratingData[0].average_rating || 0)
+          setTotalRatings(ratingData[0].total_ratings || 0)
+        } else {
+          setAverageRating(0)
+          setTotalRatings(0)
+        }
+      } catch (error) {
+        console.error("Error fetching vendor ratings:", error)
+        setAverageRating(0)
+        setTotalRatings(0)
+      }
+
       // Fetch categories for this vendor
       const { data: categoriesData, error: categoriesError } = await supabase
         .from("categories")
@@ -130,10 +239,7 @@ export default function Foods() {
 
       if (!categoriesError && categoriesData) {
         setCategories(categoriesData)
-        // Set first category as active, or null if no categories
-        if (categoriesData.length > 0) {
-          setActiveCategory(categoriesData[0].id)
-        }
+        // Keep activeCategory as null to show all items by default
       }
 
       // Fetch menu items
@@ -180,6 +286,8 @@ export default function Foods() {
           vendorId: resolvedVendorId,  // ✅ Use the resolved UUID
           vendorName,
           orgName,
+          deliveryFee,
+          minimumOrder,
         },
         quantity
       )
@@ -196,6 +304,21 @@ export default function Foods() {
   })
 
   const totalCartItems = cart.reduce((sum, i) => sum + i.quantity, 0)
+
+  // Handle category selection and scroll to menu
+  const handleCategorySelect = (categoryId: string | null) => {
+    setActiveCategory(categoryId)
+    // Scroll to menu grid after a short delay to allow re-render
+    setTimeout(() => {
+      menuGridRef.current?.measureLayout(
+        scrollViewRef.current as any,
+        (x, y) => {
+          scrollViewRef.current?.scrollTo({ y: y - 20, animated: true })
+        },
+        () => {}
+      )
+    }, 100)
+  }
 
   return (
     <View style={styles.container}>
@@ -238,10 +361,32 @@ export default function Foods() {
             <View style={styles.vendorDetails}>
               <Text style={styles.vendorName}>{vendorName || "Vendor"}</Text>
               <Text style={styles.vendorLocation}>1st Floor Canteen</Text>
-              <View style={styles.ratingRow}>
+              <TouchableOpacity
+                style={styles.ratingRow}
+                onPress={() => setShowReviewsModal(true)}
+                disabled={totalRatings === 0}
+              >
                 <Ionicons name="star" size={16} color="#FFA500" />
-                <Text style={styles.ratingText}>4.8</Text>
-                <Text style={styles.reviewCount}>(830)</Text>
+                <Text style={styles.ratingText}>
+                  {averageRating > 0 ? averageRating.toFixed(1) : "New"}
+                </Text>
+                {totalRatings > 0 && (
+                  <Text style={styles.reviewCount}>({totalRatings})</Text>
+                )}
+              </TouchableOpacity>
+              <View style={styles.deliveryInfoRow}>
+                <View style={styles.deliveryInfo}>
+                  <Ionicons name="bicycle-outline" size={14} color={Colors.light.icon} />
+                  <Text style={styles.deliveryInfoText}>
+                    {deliveryFee === 0 ? "Free delivery" : `₱${deliveryFee.toFixed(2)} delivery`}
+                  </Text>
+                </View>
+                {minimumOrder > 0 && (
+                  <View style={styles.deliveryInfo}>
+                    <Ionicons name="receipt-outline" size={14} color={Colors.light.icon} />
+                    <Text style={styles.deliveryInfoText}>Min: ₱{minimumOrder.toFixed(2)}</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -276,10 +421,32 @@ export default function Foods() {
               <View style={styles.vendorInfo}>
                 <Text style={styles.vendorName}>{vendorName || "Vendor"}</Text>
                 <Text style={styles.vendorLocation}>1st Floor Canteen</Text>
-                <View style={styles.ratingRow}>
+                <TouchableOpacity
+                  style={styles.ratingRow}
+                  onPress={() => setShowReviewsModal(true)}
+                  disabled={totalRatings === 0}
+                >
                   <Ionicons name="star" size={16} color="#FFA500" />
-                  <Text style={styles.ratingText}>4.8</Text>
-                  <Text style={styles.reviewCount}>(830)</Text>
+                  <Text style={styles.ratingText}>
+                    {averageRating > 0 ? averageRating.toFixed(1) : "New"}
+                  </Text>
+                  {totalRatings > 0 && (
+                    <Text style={styles.reviewCount}>({totalRatings})</Text>
+                  )}
+                </TouchableOpacity>
+                <View style={styles.deliveryInfoRow}>
+                  <View style={styles.deliveryInfo}>
+                    <Ionicons name="bicycle-outline" size={14} color={Colors.light.icon} />
+                    <Text style={styles.deliveryInfoText}>
+                      {deliveryFee === 0 ? "Free delivery" : `₱${deliveryFee.toFixed(2)} delivery`}
+                    </Text>
+                  </View>
+                  {minimumOrder > 0 && (
+                    <View style={styles.deliveryInfo}>
+                      <Ionicons name="receipt-outline" size={14} color={Colors.light.icon} />
+                      <Text style={styles.deliveryInfoText}>Min: ₱{minimumOrder.toFixed(2)}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
@@ -287,7 +454,7 @@ export default function Foods() {
         </>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
@@ -302,36 +469,17 @@ export default function Foods() {
           </View>
         </View>
 
-        {/* Last Order Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Last Order</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {foods.slice(0, 2).map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.lastOrderCard}
-                onPress={() => openModal(item)}
-              >
-                <View style={styles.lastOrderImage}>
-                  {item.image_url ? (
-                    <Image source={{ uri: item.image_url }} style={styles.foodImage} />
-                  ) : (
-                    <Ionicons name="fast-food" size={32} color={Colors.light.primary} />
-                  )}
-                </View>
-                <Text style={styles.lastOrderName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.lastOrderPrice}>₱{item.price}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {/* Featured Items - Auto-populated based on sales data */}
+        {resolvedVendorId && (
+          <SimpleFeaturedItems
+            vendorId={resolvedVendorId}
+            onItemPress={(itemId) => {
+              // Find the item in foods array and open modal
+              const item = foods.find(f => f.id === itemId);
+              if (item) openModal(item);
+            }}
+          />
+        )}
 
         {/* Category Tabs */}
         {categories.length > 0 && (
@@ -342,7 +490,7 @@ export default function Foods() {
                   styles.categoryTab,
                   !activeCategory && styles.categoryTabActive,
                 ]}
-                onPress={() => setActiveCategory(null)}
+                onPress={() => handleCategorySelect(null)}
               >
                 <Text
                   style={[
@@ -360,7 +508,7 @@ export default function Foods() {
                     styles.categoryTab,
                     activeCategory === category.id && styles.categoryTabActive,
                   ]}
-                  onPress={() => setActiveCategory(category.id)}
+                  onPress={() => handleCategorySelect(category.id)}
                 >
                   <Text
                     style={[
@@ -383,39 +531,14 @@ export default function Foods() {
             <Text style={styles.loadingText}>Loading menu...</Text>
           </View>
         ) : filteredFoods.length > 0 ? (
-          <View style={styles.menuGrid}>
-            {filteredFoods.map((item) => (
-              <TouchableOpacity
+          <View ref={menuGridRef} style={styles.menuGrid}>
+            {filteredFoods.map((item, index) => (
+              <AnimatedMenuItem
                 key={item.id}
-                style={styles.menuCard}
+                item={item}
+                index={index}
                 onPress={() => openModal(item)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.menuImageContainer}>
-                  {item.image_url ? (
-                    <Image source={{ uri: item.image_url }} style={styles.menuImage} />
-                  ) : (
-                    <View style={styles.placeholderImage}>
-                      <Ionicons name="fast-food" size={40} color={Colors.light.primary} />
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.menuName} numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <Text style={styles.menuDescription} numberOfLines={1}>
-                  {item.description || "Delicious food"}
-                </Text>
-                <View style={styles.menuFooter}>
-                  <Text style={styles.menuPrice}>₱{item.price}</Text>
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => openModal(item)}
-                  >
-                    <Ionicons name="add" size={20} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         ) : (
@@ -445,7 +568,7 @@ export default function Foods() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <TouchableOpacity style={styles.modalClose} onPress={closeModal}>
-              <Ionicons name="close" size={28} color={Colors.light.text} />
+              <Ionicons name="close" size={28} color="#FFFFFF" />
             </TouchableOpacity>
             {selectedFood && (
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -469,13 +592,6 @@ export default function Foods() {
                   <Text style={styles.modalDescription}>
                     {selectedFood.description || "Delicious food item from our menu"}
                   </Text>
-                  <View style={styles.modalRatingRow}>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={16} color="#FFA500" />
-                      <Text style={styles.ratingBadgeText}>4.8</Text>
-                    </View>
-                    <Text style={styles.modalReviews}>830 reviews</Text>
-                  </View>
 
                   {/* Quantity Selector */}
                   <View style={styles.quantitySection}>
@@ -524,6 +640,18 @@ export default function Foods() {
           </View>
         </View>
       </Modal>
+
+      {/* Vendor Reviews Modal */}
+      {resolvedVendorId && (
+        <VendorReviewsModal
+          visible={showReviewsModal}
+          onClose={() => setShowReviewsModal(false)}
+          vendorId={resolvedVendorId}
+          vendorName={vendorName || "Vendor"}
+          averageRating={averageRating}
+          totalRatings={totalRatings}
+        />
+      )}
     </View>
   )
 }
