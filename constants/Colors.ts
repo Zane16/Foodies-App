@@ -1,20 +1,15 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
 
-// New Color Scheme
-const purplePrimary = "#4A5EE8" // Main accent (CTAs, active states, vendor primary)
-const purpleLight = "#7C7FE5" // Light purple variation
-const purpleDark = "#4A4DB8" // Dark purple variation
-const tealSecondary = "#14B8A6" // Secondary accent (navigation, deliverer actions)
+const purplePrimary = "#4A5EE8" 
+const purpleLight = "#7C7FE5" 
+const purpleDark = "#4A4DB8" 
+const tealSecondary = "#14B8A6" 
 
-// Dark Neutrals
-const darkNavy = "#1E293B" // Headers
+
+const darkNavy = "#1E293B" 
 const darkCharcoal = "#2D3748"
-const darkSlate = "#1A202C" // Text
+const darkSlate = "#1A202C"
 
-// Grays
+
 const backgroundGray = "#F7F7F7"
 const surfaceWhite = "#FFFFFF"
 const textPrimary = "#1A202C"

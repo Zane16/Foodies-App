@@ -1,3 +1,6 @@
+import 'react-native-url-polyfill/auto'
+import 'react-native-get-random-values'
+
 import { Stack } from "expo-router";
 import AuthGuard from "./components/AuthGuard";
 import { AuthProvider } from "./context/_authContext";

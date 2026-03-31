@@ -18,6 +18,7 @@ import {
 } from "react-native"
 import * as WebBrowser from "expo-web-browser"
 import * as Linking from "expo-linking"
+import { makeRedirectUri } from "expo-auth-session"
 import { Colors } from "../../constants/Colors"
 import { useColorScheme } from "../../hooks/useColorScheme"
 import { supabase } from "../../supabase"
@@ -54,30 +55,72 @@ export default function Login() {
         useNativeDriver: true,
       }),
     ]).start()
+
+    // Note: Expo Router handles deep links automatically
+    // The foodies://auth/callback URL will automatically route to /auth/callback
+    // No manual navigation needed here
   }, [])
 
   // OAuth Sign-In with Google
   async function handleGoogleSignIn() {
     try {
-      const redirectUrl = Linking.createURL("auth/callback")
+      setIsLoading(true)
+
+      // Use the scheme from app.json (foodies://) for consistency
+      // This works for both development builds and production
+      const redirectUrl = "foodies://auth/callback"
+
+      console.log("OAuth Redirect URL:", redirectUrl)
+      console.log("Add this URL to Supabase Authentication > URL Configuration > Redirect URLs")
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: redirectUrl,
-          skipBrowserRedirect: Platform.OS !== "web",
+          skipBrowserRedirect: true,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       })
 
       if (error) throw error
 
       // Open browser for OAuth on mobile
-      if (Platform.OS !== "web" && data?.url) {
-        await WebBrowser.openAuthSessionAsync(data.url, redirectUrl)
+      if (data?.url) {
+        console.log("Opening OAuth URL...")
+
+        // Open the browser - the deep link will redirect to callback screen
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          redirectUrl
+        )
+
+        console.log("OAuth Browser Result:", result)
+
+        // The callback screen will handle the code exchange
+        // We just need to handle cancellation here
+        if (result.type === 'cancel') {
+          Alert.alert("Cancelled", "Sign in was cancelled")
+          setIsLoading(false)
+        } else if (result.type === 'dismiss') {
+          console.log("Browser dismissed - user may have been redirected to callback screen")
+          // Don't show error - the callback screen is handling it
+          setIsLoading(false)
+        } else if (result.type === 'success') {
+          console.log("Browser closed - callback screen should be handling authentication")
+          // The callback screen will handle everything
+          setIsLoading(false)
+        }
       }
     } catch (err: any) {
       console.error("OAuth Error:", err)
-      Alert.alert("Sign In Error", err.message || "Failed to sign in with Google")
+      Alert.alert(
+        "Sign In Error",
+        err.message || "Failed to sign in with Google."
+      )
+      setIsLoading(false)
     }
   }
 
@@ -168,6 +211,7 @@ export default function Login() {
             <OAuthButton
               provider="google"
               onPress={handleGoogleSignIn}
+              loading={isLoading}
               disabled={isLoading}
             />
           </View>

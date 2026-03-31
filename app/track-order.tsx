@@ -420,179 +420,174 @@ export default function TrackOrderWeb() {
         </View>
       </View>
 
-      {/* Bottom Sheet Container */}
-      <View style={styles.bottomSheet}>
-        {/* Black Header Section */}
-        <View style={styles.bottomSheetHeader}>
-          {/* Deliverer/Vendor Info Card - White Oval */}
-          <View style={styles.delivererCard}>
-            <View style={styles.delivererAvatar}>
-              {delivererInfo && order.deliverer_id && ["accepted", "on_the_way", "delivered"].includes(order.status) ? (
-                delivererInfo.profile_picture ? (
-                  <Image
-                    source={{ uri: delivererInfo.profile_picture }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <Ionicons name="person" size={24} color="#6B7280" />
-                )
-              ) : (
-                vendorInfo?.logo_url ? (
-                  <Image
-                    source={{ uri: vendorInfo.logo_url }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <Ionicons name="restaurant-outline" size={24} color="#6B7280" />
-                )
-              )}
-            </View>
-            <View style={styles.delivererInfo}>
-              <Text style={styles.delivererName}>
-                {delivererInfo && order.deliverer_id && ["accepted", "on_the_way", "delivered"].includes(order.status)
-                  ? delivererInfo.full_name
-                  : vendorInfo?.business_name || "Vendor"}
-              </Text>
-              <Text style={styles.delivererRole}>
-                {delivererInfo && order.deliverer_id && ["accepted", "on_the_way", "delivered"].includes(order.status)
-                  ? "Delivery Runner"
-                  : "Preparing your order"}
-              </Text>
-            </View>
+      {/* Bottom Sheet Container - Scrollable Content */}
+      <ScrollView
+        style={styles.bottomSheet}
+        showsVerticalScrollIndicator={true}
+        bounces={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Deliverer/Vendor Info Card - White Oval */}
+        <View style={styles.delivererCard}>
+          <View style={styles.delivererAvatar}>
             {delivererInfo && order.deliverer_id && ["accepted", "on_the_way", "delivered"].includes(order.status) ? (
-              <TouchableOpacity
-                style={styles.messageButton}
-                onPress={() => router.push({ pathname: "/chat", params: { orderId: order.id } })}
-              >
-                <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            ) : order.status === "pending" ? (
-              <TouchableOpacity
-                style={styles.cancelIconButton}
-                onPress={handleCancelOrder}
-                disabled={cancelling}
-              >
-                {cancelling ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Ionicons name="close" size={20} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
-            ) : null}
+              delivererInfo.profile_picture ? (
+                <Image
+                  source={{ uri: delivererInfo.profile_picture }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Ionicons name="person" size={24} color="#6B7280" />
+              )
+            ) : (
+              vendorInfo?.logo_url ? (
+                <Image
+                  source={{ uri: vendorInfo.logo_url }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Ionicons name="restaurant-outline" size={24} color="#6B7280" />
+              )
+            )}
           </View>
+          <View style={styles.delivererInfo}>
+            <Text style={styles.delivererName}>
+              {delivererInfo && order.deliverer_id && ["accepted", "on_the_way", "delivered"].includes(order.status)
+                ? delivererInfo.full_name
+                : vendorInfo?.business_name || "Vendor"}
+            </Text>
+            <Text style={styles.delivererRole}>
+              {delivererInfo && order.deliverer_id && ["accepted", "on_the_way", "delivered"].includes(order.status)
+                ? "Delivery Runner"
+                : "Preparing your order"}
+            </Text>
+          </View>
+          {delivererInfo && order.deliverer_id && ["accepted", "on_the_way", "delivered"].includes(order.status) ? (
+            <TouchableOpacity
+              style={styles.messageButton}
+              onPress={() => router.push({ pathname: "/chat", params: { orderId: order.id } })}
+            >
+              <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : order.status === "pending" ? (
+            <TouchableOpacity
+              style={styles.cancelIconButton}
+              onPress={handleCancelOrder}
+              disabled={cancelling}
+            >
+              {cancelling ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          ) : null}
         </View>
 
-        {/* White Content Section */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        {/* Delivery Time Section */}
+        {order.status !== "delivered" && order.status !== "completed" && order.status !== "cancelled" && (
+          <View style={styles.deliveryTimeSection}>
+            <Text style={styles.deliveryTimeLabel}>Your Delivery Time</Text>
+            <Text style={styles.deliveryTimeValue}>Estimated {getEstimatedTime()}</Text>
+          </View>
+        )}
 
-          {/* Delivery Time Section */}
-          {order.status !== "delivered" && order.status !== "completed" && order.status !== "cancelled" && (
-            <View style={styles.deliveryTimeSection}>
-              <Text style={styles.deliveryTimeLabel}>Your Delivery Time</Text>
-              <Text style={styles.deliveryTimeValue}>Estimated {getEstimatedTime()}</Text>
-            </View>
-          )}
+        {/* Progress Bar */}
+        {order.status !== "cancelled" && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressContainer}>
+              {statusSteps.map((step, index) => {
+                const isCurrent = index === currentStepIndex
+                const isPast = index < currentStepIndex
 
-          {/* Progress Bar */}
-          {order.status !== "cancelled" && (
-            <View style={styles.progressSection}>
-              <View style={styles.progressContainer}>
-                {statusSteps.map((step, index) => {
-                  const isCurrent = index === currentStepIndex
-                  const isPast = index < currentStepIndex
+                return (
+                  <View key={step} style={styles.progressStepContainer}>
+                    {/* Icon */}
+                    <View
+                      style={[
+                        styles.progressIcon,
+                        (isCurrent || isPast) && styles.progressIconActive,
+                      ]}
+                    >
+                      <Ionicons
+                        name={getStatusIcon(step)}
+                        size={20}
+                        color={(isCurrent || isPast) ? "#3B82F6" : "#D1D5DB"}
+                      />
+                    </View>
 
-                  return (
-                    <View key={step} style={styles.progressStepContainer}>
-                      {/* Icon */}
-                      <View
-                        style={[
-                          styles.progressIcon,
-                          (isCurrent || isPast) && styles.progressIconActive,
-                        ]}
-                      >
-                        <Ionicons
-                          name={getStatusIcon(step)}
-                          size={20}
-                          color={(isCurrent || isPast) ? "#3B82F6" : "#D1D5DB"}
-                        />
+                    {/* Dashed Line */}
+                    {index < statusSteps.length - 1 && (
+                      <View style={styles.progressLineContainer}>
+                        <View style={[styles.dashedLine, (isCurrent || isPast) && styles.dashedLineActive]} />
                       </View>
+                    )}
+                  </View>
+                )
+              })}
+            </View>
+          </View>
+        )}
 
-                      {/* Dashed Line */}
-                      {index < statusSteps.length - 1 && (
-                        <View style={styles.progressLineContainer}>
-                          <View style={[styles.dashedLine, (isCurrent || isPast) && styles.dashedLineActive]} />
-                        </View>
+        {/* Order Items Section */}
+        <View style={styles.itemsSection}>
+          <Text style={styles.itemsSectionTitle}>Order Details</Text>
+
+          <View style={styles.itemsCard}>
+            {order.items.map((item, index) => (
+              <View key={index}>
+                <View style={styles.itemRow}>
+                  <View style={styles.itemLeft}>
+                    <View style={styles.quantityBadge}>
+                      <Text style={styles.quantityText}>{item.quantity}x</Text>
+                    </View>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      {item.special_instructions && (
+                        <Text style={styles.itemNote}>Note: {item.special_instructions}</Text>
                       )}
                     </View>
-                  )
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* Order Items Section */}
-          <View style={styles.itemsSection}>
-            <Text style={styles.itemsSectionTitle}>Order Details</Text>
-
-            <View style={styles.itemsCard}>
-              {order.items.map((item, index) => (
-                <View key={index}>
-                  <View style={styles.itemRow}>
-                    <View style={styles.itemLeft}>
-                      <View style={styles.quantityBadge}>
-                        <Text style={styles.quantityText}>{item.quantity}x</Text>
-                      </View>
-                      <View style={styles.itemInfo}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        {item.special_instructions && (
-                          <Text style={styles.itemNote}>Note: {item.special_instructions}</Text>
-                        )}
-                      </View>
-                    </View>
-                    <Text style={styles.itemPrice}>₱{(item.price * item.quantity).toFixed(2)}</Text>
                   </View>
-                  {index < order.items.length - 1 && <View style={styles.itemDivider} />}
+                  <Text style={styles.itemPrice}>₱{(item.price * item.quantity).toFixed(2)}</Text>
                 </View>
-              ))}
+                {index < order.items.length - 1 && <View style={styles.itemDivider} />}
+              </View>
+            ))}
 
-              <View style={styles.totalDivider} />
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalAmount}>₱{order.total_price.toFixed(2)}</Text>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalAmount}>₱{order.total_price.toFixed(2)}</Text>
+            </View>
+          </View>
+
+          {/* Delivery Info */}
+          <View style={styles.deliveryInfoCard}>
+            <View style={styles.deliveryInfoRow}>
+              <Ionicons name="location" size={18} color={Colors.light.primary} />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoLabel}>Delivery Address</Text>
+                <Text style={styles.deliveryInfoValue}>{order.delivery_address}</Text>
               </View>
             </View>
-
-            {/* Delivery Info */}
-            <View style={styles.deliveryInfoCard}>
-              <View style={styles.deliveryInfoRow}>
-                <Ionicons name="location" size={18} color={Colors.light.primary} />
-                <View style={styles.deliveryInfoContent}>
-                  <Text style={styles.deliveryInfoLabel}>Delivery Address</Text>
-                  <Text style={styles.deliveryInfoValue}>{order.delivery_address}</Text>
-                </View>
+            <View style={styles.deliveryInfoDivider} />
+            <View style={styles.deliveryInfoRow}>
+              <Ionicons name="person" size={18} color={Colors.light.primary} />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoLabel}>Customer</Text>
+                <Text style={styles.deliveryInfoValue}>{order.customer_name}</Text>
               </View>
-              <View style={styles.deliveryInfoDivider} />
-              <View style={styles.deliveryInfoRow}>
-                <Ionicons name="person" size={18} color={Colors.light.primary} />
-                <View style={styles.deliveryInfoContent}>
-                  <Text style={styles.deliveryInfoLabel}>Customer</Text>
-                  <Text style={styles.deliveryInfoValue}>{order.customer_name}</Text>
-                </View>
-              </View>
-              <View style={styles.deliveryInfoDivider} />
-              <View style={styles.deliveryInfoRow}>
-                <Ionicons name="call" size={18} color={Colors.light.primary} />
-                <View style={styles.deliveryInfoContent}>
-                  <Text style={styles.deliveryInfoLabel}>Contact</Text>
-                  <Text style={styles.deliveryInfoValue}>{order.customer_phone}</Text>
-                </View>
+            </View>
+            <View style={styles.deliveryInfoDivider} />
+            <View style={styles.deliveryInfoRow}>
+              <Ionicons name="call" size={18} color={Colors.light.primary} />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoLabel}>Contact</Text>
+                <Text style={styles.deliveryInfoValue}>{order.customer_phone}</Text>
               </View>
             </View>
           </View>
+        </View>
 
         {/* Rating Section - Show when order is delivered or completed */}
         {["delivered", "completed"].includes(order.status) && user && (
@@ -696,8 +691,7 @@ export default function TrackOrderWeb() {
             )}
           </View>
         )}
-        </ScrollView>
-      </View>
+      </ScrollView>
 
       {/* Rating Modals */}
       {vendorInfo && user && (
@@ -735,13 +729,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
   },
   heroSection: {
-    flex: 1,
     backgroundColor: "#4A5EE8",
     paddingTop: 50,
-    paddingBottom: 100,
+    paddingBottom: 60,
     paddingHorizontal: 20,
     position: "relative",
     justifyContent: "center",
+    minHeight: 280,
   },
   backButtonFloating: {
     position: "absolute",
@@ -750,19 +744,19 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
     zIndex: 100,
   },
   heroContent: {
     alignItems: "center",
-    paddingTop: 40,
+    paddingTop: 20,
   },
   statusIconContainer: {
     width: 100,
@@ -770,7 +764,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
@@ -778,45 +772,37 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   statusTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
     color: "#FFFFFF",
-    marginBottom: 10,
+    marginBottom: 12,
     textAlign: "center",
   },
   statusDescription: {
     fontSize: 15,
     color: "#FFFFFF",
-    opacity: 0.9,
+    opacity: 0.92,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 24,
     paddingHorizontal: 30,
   },
   bottomSheet: {
+    flex: 1,
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     marginTop: -50,
-    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
   },
-  bottomSheetHeader: {
-    backgroundColor: "#1F2937",
-    paddingTop: 16,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
   scrollContent: {
-    flexGrow: 0,
+    flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   centerContainer: {
     flex: 1,
@@ -847,80 +833,91 @@ const styles = StyleSheet.create({
   },
   delivererCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 30,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
   },
   delivererAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 12,
     overflow: "hidden",
   },
   avatarImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   delivererInfo: {
     flex: 1,
   },
   delivererName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 2,
+    marginBottom: 4,
   },
   delivererRole: {
     fontSize: 13,
     color: "#6B7280",
   },
   messageButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#10B981",
     justifyContent: "center",
     alignItems: "center",
   },
   cancelIconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#EF4444",
     justifyContent: "center",
     alignItems: "center",
   },
   deliveryTimeSection: {
-    marginBottom: 10,
+    marginBottom: 20,
+    paddingBottom: 16,
+    marginTop: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
   deliveryTimeLabel: {
     fontSize: 13,
     color: "#6B7280",
-    marginBottom: 2,
+    marginBottom: 6,
   },
   deliveryTimeValue: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     color: "#1F2937",
   },
   progressSection: {
-    marginBottom: 10,
+    marginBottom: 28,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
   progressContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 2,
+    paddingVertical: 12,
   },
   progressStepContainer: {
     flexDirection: "row",
@@ -928,9 +925,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   progressIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F3F4F6",
@@ -975,8 +972,11 @@ const styles = StyleSheet.create({
     color: "#1F2937",
   },
   ratingSection: {
-    marginTop: 10,
+    marginTop: 20,
     marginBottom: 0,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
   },
   ratingSectionTitle: {
     fontSize: 18,
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: Colors.light.border,
     shadowColor: "#000",
@@ -1001,18 +1001,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 4,
   },
   ratingCardLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: 12,
   },
   ratingCardInfo: {
     marginLeft: 12,
     flex: 1,
   },
   ratingCardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
     color: Colors.light.text,
     marginBottom: 2,
@@ -1036,7 +1038,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   editRatingButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: Colors.light.input,
@@ -1054,23 +1056,27 @@ const styles = StyleSheet.create({
   },
   starsRow: {
     flexDirection: "row",
-    gap: 4,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 10,
   },
   ratingComment: {
     fontSize: 13,
     color: Colors.light.text,
-    lineHeight: 18,
+    lineHeight: 20,
     fontStyle: "italic",
   },
   itemsSection: {
-    marginBottom: 24,
+    marginBottom: 32,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
   },
   itemsSectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 12,
+    marginBottom: 16,
+    marginTop: 12,
   },
   itemsCard: {
     backgroundColor: "#FFFFFF",
@@ -1083,13 +1089,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   itemLeft: {
     flexDirection: "row",
@@ -1099,15 +1105,15 @@ const styles = StyleSheet.create({
   },
   quantityBadge: {
     backgroundColor: "#EEF2FF",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     marginRight: 12,
-    minWidth: 36,
+    minWidth: 40,
     alignItems: "center",
   },
   quantityText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: Colors.light.primary,
   },
@@ -1118,13 +1124,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#1F2937",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   itemNote: {
     fontSize: 12,
     color: "#6B7280",
     fontStyle: "italic",
-    marginTop: 2,
+    marginTop: 4,
   },
   itemPrice: {
     fontSize: 15,
@@ -1138,12 +1144,13 @@ const styles = StyleSheet.create({
   totalDivider: {
     height: 2,
     backgroundColor: "#E5E7EB",
-    marginVertical: 12,
+    marginVertical: 14,
   },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingVertical: 8,
   },
   totalLabel: {
     fontSize: 16,
@@ -1151,7 +1158,7 @@ const styles = StyleSheet.create({
     color: "#1F2937",
   },
   totalAmount: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     color: Colors.light.primary,
   },
@@ -1161,6 +1168,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    marginTop: 16,
   },
   deliveryInfoRow: {
     flexDirection: "row",
@@ -1173,17 +1181,17 @@ const styles = StyleSheet.create({
   deliveryInfoLabel: {
     fontSize: 12,
     color: "#6B7280",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   deliveryInfoValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
     color: "#1F2937",
-    lineHeight: 20,
+    lineHeight: 22,
   },
   deliveryInfoDivider: {
     height: 1,
     backgroundColor: "#E5E7EB",
-    marginVertical: 12,
+    marginVertical: 14,
   },
 })

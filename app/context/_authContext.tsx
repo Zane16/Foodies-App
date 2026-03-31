@@ -55,12 +55,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fetch user profile and organization data
   const fetchProfileAndOrganization = async (userId: string) => {
     try {
-      // Fetch user profile with organization data
-      const { data: profileData, error: profileError } = await supabase
+      console.log("AuthContext: Fetching profile for user:", userId)
+
+      // Fetch user profile first with timeout
+      const profilePromise = supabase
         .from("profiles")
-        .select("*, organizations(*)")
+        .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle()
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Profile fetch timeout")), 30000)
+      )
+
+      let profileData, profileError
+      try {
+        const result = await Promise.race([profilePromise, timeoutPromise]) as any
+        profileData = result.data
+        profileError = result.error
+      } catch (timeoutError) {
+        console.error("AuthContext: Profile fetch timed out after 30 seconds")
+        setProfile(null)
+        setOrganization(null)
+        return
+      }
 
       if (profileError) {
         console.error("Error fetching profile:", profileError.message);
@@ -69,13 +87,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (profileData) {
-        // Extract organization data from the joined query
-        const orgData = profileData.organizations;
-        delete profileData.organizations; // Remove nested object
+      // If profile doesn't exist yet, just return (it will be created by the callback screen)
+      if (!profileData) {
+        console.log("Profile not found yet - will be created during signup/OAuth flow");
+        setProfile(null);
+        setOrganization(null);
+        return;
+      }
 
+      if (profileData) {
+        console.log("AuthContext: Profile found:", profileData.email, profileData.role)
         setProfile(profileData as Profile);
-        setOrganization(orgData as Organization);
+
+        // Fetch organization data separately if organization_id exists
+        if (profileData.organization_id) {
+          const { data: orgData, error: orgError } = await supabase
+            .from("organizations")
+            .select("*")
+            .eq("id", profileData.organization_id)
+            .single();
+
+          if (orgError) {
+            console.error("Error fetching organization:", orgError.message);
+            setOrganization(null);
+          } else {
+            setOrganization(orgData as Organization);
+          }
+        } else {
+          setOrganization(null);
+        }
 
         // Update last_login_at timestamp
         await supabase
@@ -116,7 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getSession();
 
     // Listen for auth state changes (login/logout)
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("AuthContext: Auth state changed:", event, "User:", session?.user?.email || "none")
       const sessionUser = session?.user || null;
       setUser(sessionUser);
 

@@ -1,174 +1,258 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { View, Text, ActivityIndicator, StyleSheet, Alert } from "react-native"
 import { useRouter, useLocalSearchParams } from "expo-router"
-import * as Linking from "expo-linking"
 import { supabase } from "../../supabase"
+import * as Linking from "expo-linking"
 
-/**
- * Auth Callback Screen
- *
- * Handles OAuth and Magic Link authentication callbacks.
- * This screen processes the redirect from:
- * - Google OAuth
- * - Microsoft OAuth (future)
- * - Magic Link emails
- *
- * Flow:
- * 1. Extract session from URL parameters
- * 2. Validate user email domain
- * 3. Detect organization from email
- * 4. Create/update user profile with organization_id
- * 5. Redirect to home screen
- */
 export default function AuthCallback() {
   const router = useRouter()
   const params = useLocalSearchParams()
-  const [status, setStatus] = useState<string>("Processing authentication...")
+  const [status, setStatus] = useState("Processing authentication...")
+  const hasRun = useRef(false)
 
   useEffect(() => {
-    handleAuthCallback()
+    if (hasRun.current) return
+    hasRun.current = true
+
+    const run = async () => {
+      console.log("=== Auth Callback Started ===")
+      console.log("URL params:", params)
+
+      // Prefer params first (Expo Router already parsed the URL for us)
+      let url: string | null = null
+      if (params.code) {
+        url = `foodies://auth/callback?code=${params.code}`
+        console.log("Constructed URL from params:", url)
+      } else {
+        // Fallback to getting the full URL
+        url = await Linking.getInitialURL()
+        console.log("Initial URL:", url)
+      }
+
+      // Check if we have a code - if so, trigger the exchange and listen for auth state change
+      if (url && url.includes('code=')) {
+        console.log("Setting up auth state listener...")
+
+        let sessionHandled = false
+
+        // Set up listener for auth state change BEFORE triggering the exchange
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("Callback screen - Auth event:", event)
+
+          if (event === 'SIGNED_IN' && session?.user && !sessionHandled) {
+            sessionHandled = true
+            console.log("Session detected via listener!")
+            subscription.unsubscribe()
+            await completeAuthFlow(session)
+          }
+        })
+
+        // Now trigger the exchange (it will hang, but the listener will catch the session)
+        handleAuthCallback(url)
+
+        // Safety timeout - if no session after 15 seconds, show error
+        setTimeout(() => {
+          if (!sessionHandled) {
+            console.error("Timeout waiting for session")
+            subscription.unsubscribe()
+            Alert.alert(
+              "Authentication Timeout",
+              "The login process took too long. Please try again.",
+              [{ text: "OK", onPress: () => router.replace("/auth/login") }]
+            )
+          }
+        }, 15000)
+      } else {
+        handleAuthCallback(url)
+      }
+    }
+
+    run()
   }, [])
 
-  const handleAuthCallback = async () => {
+  const handleAuthCallback = (url: string | null) => {
+    // Don't await this - just trigger the exchange
+    // The auth state listener will handle the session when it's created
+    if (url && url.includes('code=')) {
+      console.log("Detected OAuth callback with code parameter")
+
+      // Extract the authorization code from the URL
+      const urlObj = new URL(url)
+      const code = urlObj.searchParams.get('code')
+
+      if (!code) {
+        console.error("No authorization code found in callback URL")
+        Alert.alert(
+          "Authentication Error",
+          "No authorization code found",
+          [{ text: "OK", onPress: () => router.replace("/auth/login") }]
+        )
+        return
+      }
+
+      console.log("Triggering code exchange...")
+      console.log("Authorization code:", code)
+
+      // Trigger the exchange (don't await - the listener will catch the result)
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (error) {
+          console.error("Code exchange error:", error)
+        } else {
+          console.log("Code exchange completed successfully")
+        }
+      }).catch((err) => {
+        console.error("Code exchange failed:", err)
+      })
+    } else {
+      console.error("Invalid callback URL - missing authorization code")
+      Alert.alert(
+        "Authentication Error",
+        "Invalid callback URL",
+        [{ text: "OK", onPress: () => router.replace("/auth/login") }]
+      )
+    }
+  }
+
+  const completeAuthFlow = async (session: any) => {
+    const user = session.user
+    const userEmail = user.email
+
+    console.log("=== OAuth Complete Auth Flow ===")
+    console.log("User ID:", user.id)
+    console.log("User Email:", userEmail)
+
+    if (!userEmail) {
+      throw new Error("Email not found in session")
+    }
+
+    setStatus("Checking your profile...")
+
+    // Test basic fetch first
+    console.log("DEBUG: Testing basic fetch...")
     try {
-      setStatus("Validating credentials...")
+      const testResponse = await fetch('https://httpbin.org/get')
+      const testJson = await testResponse.json()
+      console.log("DEBUG: Basic fetch works! Status:", testResponse.status)
+    } catch (fetchErr) {
+      console.error("DEBUG: Basic fetch FAILED:", fetchErr)
+    }
 
-      // Get the current URL to extract session tokens
-      const url = await Linking.getInitialURL()
+    console.log("DEBUG: About to query profiles table")
+    console.log("DEBUG: Query params - user.id:", user.id)
+    console.log("DEBUG: Supabase URL:", 'https://qjvamxyspqexibdsavkc.supabase.co')
 
-      if (!url) {
-        throw new Error("No callback URL found")
+    // Check if profile exists
+    let existingProfile, fetchError
+    try {
+      console.log("DEBUG: Executing query...")
+      const result = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      console.log("DEBUG: Query completed!")
+      console.log("DEBUG: Result:", JSON.stringify(result, null, 2))
+
+      existingProfile = result.data
+      fetchError = result.error
+    } catch (queryError) {
+      console.error("DEBUG: Query threw exception:", queryError)
+      throw queryError
+    }
+
+    console.log("Existing profile:", existingProfile ? "Found" : "Not found")
+    if (fetchError) {
+      console.error("Fetch profile error:", fetchError)
+      throw fetchError
+    }
+
+    if (existingProfile) {
+      // Returning user - just update last login
+      console.log("Returning user - updating last login")
+
+      if (existingProfile.role !== "customer") {
+        throw new Error("This app is for customers only. Please use the appropriate app for your role.")
       }
 
-      // Parse the URL to extract session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      const { error } = await supabase
+        .from("profiles")
+        .update({ last_login_at: new Date().toISOString() })
+        .eq("id", user.id)
 
-      if (sessionError) {
-        throw sessionError
+      if (error) {
+        console.error("Update last_login_at error:", error)
+        // Don't throw - not critical
       }
-
-      if (!session || !session.user) {
-        throw new Error("No session found. Please try logging in again.")
-      }
-
-      const user = session.user
-      const userEmail = user.email
-
-      if (!userEmail) {
-        throw new Error("Email not found in user session")
-      }
-
+    } else {
+      // First-time user - try to detect organization from email domain
+      console.log("First-time user - detecting organization from email domain")
       setStatus("Detecting your organization...")
 
-      // Detect organization from email domain
-      const { data: orgData, error: orgError } = await supabase.rpc(
-        "get_organization_by_email",
-        { user_email: userEmail }
-      )
+      const emailDomain = userEmail.split("@")[1].toLowerCase()
+      console.log("Looking up organization for domain:", emailDomain)
 
-      if (orgError) {
-        console.error("Organization lookup error:", orgError)
-        throw new Error("Unable to detect organization from email domain")
-      }
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("id, name, slug")
+        .eq("status", "active")
+        .contains("email_domains", [emailDomain])
+        .limit(1)
 
-      if (!orgData || orgData.length === 0) {
-        const domain = userEmail.split("@")[1]
-        throw new Error(
-          `Email domain @${domain} is not registered with any organization. Please use your institutional email address.`
-        )
-      }
+      const organization = orgData && orgData.length > 0 ? orgData[0] : null
+      console.log("Organization:", organization ? organization.name : "not found - will ask user to select")
 
-      const organization = orgData[0]
+      if (organization) {
+        // Organization found by email domain - create profile automatically
+        setStatus("Creating your profile...")
 
-      setStatus("Setting up your profile...")
-
-      // Check if profile already exists
-      const { data: existingProfile, error: profileCheckError } =
-        await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle()
-
-      if (profileCheckError) {
-        console.error("Profile check error:", profileCheckError)
-      }
-
-      if (existingProfile) {
-        // Update existing profile with organization_id and auth provider
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            organization_id: organization.org_id,
-            auth_provider: getAuthProvider(user),
-            email_verified: true,
-            last_login_at: new Date().toISOString(),
-          })
-          .eq("id", user.id)
-
-        if (updateError) {
-          console.error("Profile update error:", updateError)
-          throw new Error("Failed to update profile")
-        }
-      } else {
-        // Create new profile for first-time OAuth users
         const fullName =
           user.user_metadata?.full_name ||
           user.user_metadata?.name ||
           userEmail.split("@")[0]
 
-        const { error: insertError } = await supabase
-          .from("profiles")
-          .insert([
-            {
-              id: user.id,
-              email: userEmail,
-              full_name: fullName,
-              role: "customer",
-              organization_id: organization.org_id,
-              auth_provider: getAuthProvider(user),
-              email_verified: true,
-              last_login_at: new Date().toISOString(),
-            },
-          ])
+        const { error: insertError } = await supabase.from("profiles").insert([{
+          id: user.id,
+          email: userEmail,
+          full_name: fullName,
+          role: "customer",
+          organization_id: organization?.id || null,
+          organization: organization?.name || "global",
+          auth_provider: getAuthProvider(user),
+          email_verified: true,
+          status: "approved",
+          last_login_at: new Date().toISOString(),
+        }])
 
         if (insertError) {
-          console.error("Profile creation error:", insertError)
-          throw new Error("Failed to create profile")
+          console.error("Insert profile error:", insertError)
+          throw insertError
         }
+        console.log("Profile created successfully")
+
+        setStatus("Success! Redirecting...")
+        console.log("Navigating to home screen")
+
+        setTimeout(() => {
+          router.replace("/(tabs)/home")
+        }, 500)
+      } else {
+        // No organization found - redirect to selection screen
+        console.log("No organization found by email domain - redirecting to select-organization screen")
+        setStatus("Redirecting to organization selection...")
+
+        setTimeout(() => {
+          router.replace("/auth/select-organization")
+        }, 500)
       }
-
-      setStatus("Success! Redirecting...")
-
-      // Small delay for better UX
-      setTimeout(() => {
-        router.replace("/(tabs)/home")
-      }, 500)
-    } catch (error: any) {
-      console.error("Auth callback error:", error)
-      Alert.alert(
-        "Authentication Error",
-        error.message || "An error occurred during authentication",
-        [
-          {
-            text: "Try Again",
-            onPress: () => router.replace("/auth/login"),
-          },
-        ]
-      )
     }
   }
 
-  /**
-   * Detect which OAuth provider was used based on user metadata
-   */
   const getAuthProvider = (user: any): string => {
     const provider = user.app_metadata?.provider
-
     if (provider === "google") return "google"
     if (provider === "microsoft") return "microsoft"
     if (provider === "email") return "magic_link"
-
     return "password"
   }
 

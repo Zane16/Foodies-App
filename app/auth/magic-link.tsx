@@ -79,10 +79,15 @@ export default function MagicLink() {
 
     try {
       // Check if email domain is registered with an organization
-      const { data: orgData, error: orgError } = await supabase.rpc(
-        "get_organization_by_email",
-        { user_email: email }
-      )
+      const emailDomain = email.split("@")[1].toLowerCase()
+      console.log("Looking up organization for domain:", emailDomain)
+
+      const { data: orgData, error: orgError } = await supabase
+        .from("organizations")
+        .select("id, name, slug, email_domains, logo_url, primary_color")
+        .eq("status", "active")
+        .contains("email_domains", [emailDomain])
+        .limit(1)
 
       if (orgError) {
         console.error("Organization lookup error:", orgError)
@@ -90,17 +95,24 @@ export default function MagicLink() {
       }
 
       if (!orgData || orgData.length === 0) {
-        const domain = email.split("@")[1]
         Alert.alert(
           "Email Not Registered",
-          `The email domain @${domain} is not registered with any organization. Please use your institutional email address.`,
+          `The email domain @${emailDomain} is not registered with any organization. Please use your institutional email address.`,
           [{ text: "OK" }]
         )
         setIsLoading(false)
         return
       }
 
-      const organization = orgData[0]
+      const organization = {
+        org_id: orgData[0].id,
+        org_name: orgData[0].name,
+        org_slug: orgData[0].slug,
+        org_email_domains: orgData[0].email_domains,
+        org_logo_url: orgData[0].logo_url,
+        org_primary_color: orgData[0].primary_color
+      }
+      console.log("Organization found:", organization)
 
       // Send magic link
       const redirectUrl = Linking.createURL("auth/callback")

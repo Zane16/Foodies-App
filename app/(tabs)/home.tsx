@@ -110,11 +110,17 @@ export default function OrganizationSelection() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from("profiles")
         .select("delivery_address")
         .eq("id", user.id)
         .single()
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Address fetch timeout")), 30000)
+      )
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
 
       if (!error && data?.delivery_address) {
         setUserAddress(data.delivery_address)
@@ -122,7 +128,7 @@ export default function OrganizationSelection() {
         setUserAddress("Set delivery address")
       }
     } catch (error) {
-      console.error("Error fetching address:", error)
+      console.error("Error fetching address (timeout):", error)
       setUserAddress("Set delivery address")
     }
   }
@@ -131,18 +137,25 @@ export default function OrganizationSelection() {
     if (!user?.id) return
 
     try {
-      // Fetch unread messages count
-      const { count, error } = await supabase
+      // Fetch unread messages count with timeout
+      const queryPromise = supabase
         .from("messages")
         .select("*", { count: "exact", head: true })
         .eq("read", false)
         .neq("sender_id", user.id)
 
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Notifications fetch timeout")), 30000)
+      )
+
+      const { count, error } = await Promise.race([queryPromise, timeoutPromise]) as any
+
       if (!error && count) {
         setNotificationCount(count)
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error)
+      console.error("Error fetching notifications (timeout):", error)
+      setNotificationCount(0)
     }
   }
 
@@ -153,29 +166,42 @@ export default function OrganizationSelection() {
   const fetchOrganizations = async () => {
     setLoading(true)
 
-    // Query the organizations table directly (allows viewing all active orgs)
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("id, name, logo_url, header_image_url")
-      .eq("status", "active")
-      .order("name", { ascending: true })
+    try {
+      // Query the organizations table directly (allows viewing all active orgs) with timeout
+      const queryPromise = supabase
+        .from("organizations")
+        .select("id, name, logo_url, header_image_url")
+        .eq("status", "active")
+        .order("name", { ascending: true })
 
-    if (error) {
-      console.error("Error fetching organizations:", error)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Organizations fetch timeout")), 30000)
+      )
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
+
+      if (error) {
+        console.error("Error fetching organizations:", error)
+        setOrganizations([])
+        setLoading(false)
+        return
+      }
+
+      const orgs = data.map((org: any) => ({
+        id: org.id,
+        name: org.name,
+        logo: org.logo_url,
+        headerImage: org.header_image_url,
+        icon: "school" as const,
+      }))
+
+      setOrganizations(orgs)
       setLoading(false)
-      return
+    } catch (timeoutError) {
+      console.error("Organizations fetch timed out:", timeoutError)
+      setOrganizations([])
+      setLoading(false)
     }
-
-    const orgs = data.map((org) => ({
-      id: org.id,
-      name: org.name,
-      logo: org.logo_url,
-      headerImage: org.header_image_url,
-      icon: "school" as const,
-    }))
-
-    setOrganizations(orgs)
-    setLoading(false)
   }
 
   const handlePress = (org: any) => {
